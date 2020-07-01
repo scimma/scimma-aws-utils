@@ -98,8 +98,7 @@ def setup(config):
               help="emits only 'export AWS_PROFILE=<...>' so you can eval output")
 def login(config_file, eval):
     if not config_exists(config_file):
-        click.fail("Config not setup. Run scimma-aws setup first.")
-        return
+        raise click.UsageError("Config not setup. Run scimma-aws setup first.")
     config = Config.from_file(config_file)
 
     creds = get_aws_creds(config.username, config.password, config.entity_id)
