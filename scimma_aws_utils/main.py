@@ -5,11 +5,15 @@ import logging
 import os
 import os.path
 import pathlib
+import sys
 
 import click
 import humanize
 
-from .awscreds import get_aws_creds, write_aws_credentials
+from .awscreds import get_aws_creds, write_aws_config
+
+
+logger = logging.getLogger(__name__)
 
 
 def default_config_dir() -> pathlib.Path:
@@ -23,6 +27,8 @@ def default_config_dir() -> pathlib.Path:
 def default_config_file() -> pathlib.Path:
     return default_config_dir() / "config"
 
+def default_cache_dir() -> pathlib.Path:
+    return default_config_dir() / "cache"
 
 @click.group()
 @click.option("--verbose", is_flag=True)
@@ -42,7 +48,7 @@ def main(verbose, debug):
               type=click.Path(file_okay=True, writable=True),
               show_default=True)
 def setup(config):
-    if config_exists(config):
+    if os.path.exists(config):
         confirmed = click.confirm(
             "Config file already exists. Proceeding will overwrite. OK?")
         if not confirmed:
@@ -74,7 +80,7 @@ def setup(config):
     region = click.prompt("AWS Region to connect to",
                           type=str, default="us-west-2").strip()
     profile_name = click.prompt(
-        "AWS credential profile name to use", type=str, default="scimma")
+        "AWS credential profile name to use", type=str, default="default")
     profile_name = profile_name.strip()
     # Write config file
     conf = Config(
@@ -86,6 +92,8 @@ def setup(config):
     )
     conf.to_file(config)
     click.echo(f"Your configuration has been saved to {config}.")
+    write_aws_config(conf.profile_name, conf.region, sys.argv[0])
+    click.echo(f"AWS configuration has been saved.")
 
 
 @click.command()
@@ -94,26 +102,44 @@ def setup(config):
               help="filename to store configuration information",
               type=click.Path(file_okay=True, writable=True),
               show_default=True)
-@click.option("--eval", is_flag=True,
-              help="emits only 'export AWS_PROFILE=<...>' so you can eval output")
-def login(config_file, eval):
-    if not config_exists(config_file):
+@click.option("--cache-ignore", is_flag=True,
+              help="ignore any cached credentials, and dont store in cache")
+@click.option("--cache-force-refresh", is_flag=True,
+              help="force an update of cached credentials")
+@click.option("--cache-dir", default=default_cache_dir(),
+              help="directory to cache credentials in")
+def login(config_file, cache_ignore, cache_force_refresh, cache_dir):
+    if not os.path.exists(config_file):
         raise click.UsageError("Config not setup. Run scimma-aws setup first.")
     config = Config.from_file(config_file)
 
-    creds = get_aws_creds(config.username, config.password, config.entity_id)
-    write_aws_credentials(config.profile_name, "", config.region, creds)
-    expiration = creds["Expiration"]
-    duration = humanize.naturaldelta(
-        expiration - datetime.datetime.now(expiration.tzinfo))
-    if eval:
-        print(f"export AWS_PROFILE={config.profile_name}")
-    else:
-        click.echo(
-            f"Done. Credentials will last for the next {duration}, expiring at {expiration}."
-        )
-        click.echo(
-            f"Activate this by running 'export AWS_PROFILE={config.profile_name}'")
+    creds = None
+    creds_cache_filename = cache_dir / config.profile_name
+    if not cache_ignore and not cache_force_refresh:
+        try:
+            logger.debug("checking for credentials in cache at %s", creds_cache_filename)
+            creds = CredentialSet.from_cache_file(creds_cache_filename)
+        except FileNotFoundError:
+            logger.debug("cached credentials not found")
+            pass
+
+    if creds is not None:
+        # Cached credentials found. Check if they're still live.
+        logger.debug("cached credentials found, checking expiration")
+        if creds.expired():
+            # No good.
+            logger.debug("credentials are expired")
+            creds = None
+
+    if creds is None:
+        logger.debug("refreshing credentials")
+        raw_creds = get_aws_creds(config.username, config.password, config.entity_id)
+        creds = CredentialSet.from_aws_creds(raw_creds)
+        if not cache_ignore:
+            logger.debug("storing credentials in cache")
+            creds.to_cache_file(creds_cache_filename)
+
+    print(json.dumps(creds.to_aws_creds()))
 
 
 @dataclasses.dataclass
@@ -143,8 +169,51 @@ class Config:
         return Config(**data)
 
 
-def config_exists(filepath):
-    return os.path.exists(filepath)
+@dataclasses.dataclass
+class CredentialSet:
+    version: int
+    access_key_id: str
+    secret_access_key: str
+    session_token: str
+    expiration: datetime.datetime
+
+    def to_aws_creds(self):
+        return {
+            "Version": self.version,
+            "AccessKeyId": self.access_key_id,
+            "SecretAccessKey": self.secret_access_key,
+            "SessionToken": self.session_token,
+            "Expiration": self.expiration.isoformat()
+        }
+
+    def to_cache_file(self, filename):
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
+        json_data = self.to_aws_creds()
+        with open(filename, "w") as f:
+            json.dump(json_data, f)
+
+    @classmethod
+    def from_aws_creds(cls, creds):
+        try:
+            expiration = datetime.datetime.fromisoformat(creds["Expiration"])
+        except:
+            expiration = creds["Expiration"]
+        return CredentialSet(
+            version=1,
+            access_key_id=creds["AccessKeyId"],
+            secret_access_key=creds["SecretAccessKey"],
+            session_token=creds["SessionToken"],
+            expiration=expiration,
+        )
+
+    @classmethod
+    def from_cache_file(cls, filename):
+        with open(filename, "r") as f:
+            json_data = json.load(f)
+            return CredentialSet.from_aws_creds(json_data)
+
+    def expired(self, margin=datetime.timedelta(minutes=10)):
+        return datetime.datetime.now(self.expiration.tzinfo) > (self.expiration - margin)
 
 
 main.add_command(setup)

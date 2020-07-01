@@ -10,21 +10,22 @@ import requests
 from .auth import login_aws_via_idp
 
 
-def write_aws_credentials(profile_name, output_format, region, credentials):
-    cred_file = os.path.expanduser("~/.aws/credentials")
+def write_aws_config(profile_name, region, executable):
+    config_filepath = os.path.expanduser("~/.aws/config")
     config = configparser.RawConfigParser()
-    config.read(cred_file)
+    config.read(config_filepath)
 
-    if not config.has_section(profile_name):
-        config.add_section(profile_name)
+    section_name = f"profile {profile_name}"
+    if not config.has_section(section_name):
+        config.add_section(section_name)
 
-    config.set(profile_name, 'region', region)
-    config.set(profile_name, 'aws_access_key_id', credentials['AccessKeyId'])
-    config.set(profile_name, 'aws_secret_access_key',
-               credentials['SecretAccessKey'])
-    config.set(profile_name, 'aws_session_token', credentials['SessionToken'])
+    config.set(section_name, 'region', region)
+
+    cred_process = f"{executable} login"
+    config.set(section_name, "credential_process", cred_process)
+
     # Write the updated config file.
-    with open(cred_file, 'w+') as configfile:
+    with open(config_filepath, 'w+') as configfile:
         config.write(configfile)
 
 
