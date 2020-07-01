@@ -1,7 +1,6 @@
 import configparser
 import logging
 import os.path
-import sys
 
 import boto3
 import botocore
@@ -36,7 +35,7 @@ def get_aws_creds(username, password, entity_id, role_arn):
     assertion, roles = login_aws_via_idp(
         requests.Session(), username, password, entity_id)
     arns = parse_roles(roles)
-    if not role_arn in arns:
+    if role_arn not in arns:
         logger.debug("all arns: %s", arns)
         raise ValueError(f"you do not have permission to assume {role_arn}")
     principal_arn = arns[role_arn]

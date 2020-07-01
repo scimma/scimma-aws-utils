@@ -8,11 +8,10 @@ import pathlib
 import sys
 
 import click
-import humanize
 import requests
 
-from .awscreds import get_aws_creds, write_aws_config, parse_roles
 from .auth import login_aws_via_idp
+from .awscreds import get_aws_creds, parse_roles, write_aws_config
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +27,10 @@ def default_config_dir() -> pathlib.Path:
 def default_config_file() -> pathlib.Path:
     return default_config_dir() / "config"
 
+
 def default_cache_dir() -> pathlib.Path:
     return default_config_dir() / "cache"
+
 
 @click.group()
 @click.option("--verbose", is_flag=True)
@@ -91,7 +92,8 @@ def setup(config):
         region=region,
         profile_name=profile_name,
     )
-    click.secho("Verifying your credentials by attempting to log in.", color="yellow")
+    click.secho(
+        "Verifying your credentials by attempting to log in.", color="yellow")
     assertion, roles = login_aws_via_idp(
         requests.Session(), conf.username, conf.password, conf.entity_id,
     )
@@ -113,7 +115,7 @@ def setup(config):
     conf.to_file(config)
     click.echo(f"Your configuration has been saved to {config}.")
     write_aws_config(conf.profile_name, conf.region, sys.argv[0])
-    click.echo(f"AWS configuration has been saved.")
+    click.echo("AWS configuration has been saved.")
 
 
 @click.command()
@@ -137,7 +139,8 @@ def login(config_file, cache_ignore, cache_force_refresh, cache_dir):
     creds_cache_filename = cache_dir / config.profile_name
     if not cache_ignore and not cache_force_refresh:
         try:
-            logger.debug("checking for credentials in cache at %s", creds_cache_filename)
+            logger.debug("checking for credentials in cache at %s",
+                         creds_cache_filename)
             creds = CredentialSet.from_cache_file(creds_cache_filename)
         except FileNotFoundError:
             logger.debug("cached credentials not found")
@@ -153,7 +156,8 @@ def login(config_file, cache_ignore, cache_force_refresh, cache_dir):
 
     if creds is None:
         logger.debug("refreshing credentials")
-        raw_creds = get_aws_creds(config.username, config.password, config.entity_id, config.role_arn)
+        raw_creds = get_aws_creds(
+            config.username, config.password, config.entity_id, config.role_arn)
         creds = CredentialSet.from_aws_creds(raw_creds)
         if not cache_ignore:
             logger.debug("storing credentials in cache")
@@ -218,7 +222,7 @@ class CredentialSet:
     def from_aws_creds(cls, creds):
         try:
             expiration = datetime.datetime.fromisoformat(creds["Expiration"])
-        except:
+        except TypeError:
             expiration = creds["Expiration"]
         return CredentialSet(
             version=1,
