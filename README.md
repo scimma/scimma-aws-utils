@@ -1,6 +1,6 @@
 # scimma-aws-utils #
 
-This is a little tool for connecting to SCIMMA's AWS resource from the command
+This is a little tool for connecting to SCIMMA's AWS resources from the command
 line using your institutional credentials. The main tool is a command-line
 program called `scimma-aws`.
 
@@ -33,7 +33,7 @@ swnelson@swnelson-laptop [01:55:02]  [~]
 You must be a member of the SCIMMA collaboration, with an account already
 registered, and you must be in the DevOps group.
 
-To make an account, follow the instructions [here](https://scimma.github.io/IAM/).y
+To make an account, follow the instructions [here](https://scimma.github.io/IAM/).
 
 To get in the DevOps group, request membership [here](https://registry.scimma.org/registry/co_petitions/start/coef:4).
 
