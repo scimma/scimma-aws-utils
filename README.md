@@ -1,7 +1,32 @@
 # scimma-aws-utils #
 
 This is a little tool for connecting to SCIMMA's AWS resource from the command
-line using your institutional credentials.
+line using your institutional credentials. The main tool is a command-line
+program called `scimma-aws`.
+
+For example, here's how I use `scimma-aws login`:
+
+```
+swnelson@swnelson-laptop [01:54:44]  [~]
+-> % aws sts get-caller-identity --output=json
+Unable to locate credentials. You can configure credentials by running "aws configure".
+
+swnelson@swnelson-laptop [01:54:50]  [~]
+-> % scimma-aws login
+Done. Credentials will last for the next 59 minutes, expiring at 2020-07-01 21:54:59+00:00.
+Activate this by running 'export AWS_PROFILE=scimma'
+
+swnelson@swnelson-laptop [01:54:59]  [~]
+-> % export AWS_PROFILE=scimma
+
+swnelson@swnelson-laptop [01:55:02]  [~]
+-> % aws sts get-caller-identity --output=json                                               <aws:scimma>
+{
+    "UserId": "AROAYQQCALM7SDS2266Y5:spencer.nelson",
+    "Account": "<redacted>",
+    "Arn": "arn:aws:sts::<redacted>:assumed-role/scimma_power_user/spencer.nelson"
+}
+```
 
 ## Prerequisites ##
 
