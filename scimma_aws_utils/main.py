@@ -9,9 +9,10 @@ import sys
 
 import click
 import humanize
+import requests
 
-from .awscreds import get_aws_creds, write_aws_config
-
+from .awscreds import get_aws_creds, write_aws_config, parse_roles
+from .auth import login_aws_via_idp
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,25 @@ def setup(config):
         region=region,
         profile_name=profile_name,
     )
+    click.secho("Verifying your credentials by attempting to log in.", color="yellow")
+    assertion, roles = login_aws_via_idp(
+        requests.Session(), conf.username, conf.password, conf.entity_id,
+    )
+    click.secho("Log-in succesful!", color="green")
+    roles = parse_roles(roles)
+    if len(roles) == 1:
+        conf.role_arn = list(roles.keys())[0]
+        click.echo(f"You will log in as {conf.role_arn}.")
+    else:
+        click.echo("Choose role to assume")
+        enumerated = dict(enumerate(roles.keys(), start=1))
+        for i, role_arn in sorted(enumerated.items()):
+            click.echo(f"  [{i}]: {role_arn}")
+        chosen_idx = click.prompt(
+            "Choose role to assume", type=int,
+        )
+        conf.role_arn = enumerated[chosen_idx]
+
     conf.to_file(config)
     click.echo(f"Your configuration has been saved to {config}.")
     write_aws_config(conf.profile_name, conf.region, sys.argv[0])
@@ -133,7 +153,7 @@ def login(config_file, cache_ignore, cache_force_refresh, cache_dir):
 
     if creds is None:
         logger.debug("refreshing credentials")
-        raw_creds = get_aws_creds(config.username, config.password, config.entity_id)
+        raw_creds = get_aws_creds(config.username, config.password, config.entity_id, config.role_arn)
         creds = CredentialSet.from_aws_creds(raw_creds)
         if not cache_ignore:
             logger.debug("storing credentials in cache")
@@ -149,6 +169,7 @@ class Config:
     entity_id: str
     region: str
     profile_name: str
+    role_arn: str = ""
 
     def to_file(self, filepath):
         os.makedirs(os.path.dirname(filepath), exist_ok=True)
@@ -158,6 +179,7 @@ class Config:
             "entity_id": self.entity_id,
             "region": self.region,
             "profile_name": self.profile_name,
+            "role_arn": self.role_arn,
         }
         with open(filepath, "w") as f:
             json.dump(config_data, f)

@@ -1,4 +1,5 @@
 import configparser
+import logging
 import os.path
 import sys
 
@@ -8,6 +9,8 @@ import botocore.config
 import requests
 
 from .auth import login_aws_via_idp
+
+logger = logging.getLogger(__name__)
 
 
 def write_aws_config(profile_name, region, executable):
@@ -29,11 +32,23 @@ def write_aws_config(profile_name, region, executable):
         config.write(configfile)
 
 
-def get_aws_creds(username, password, entity_id):
+def get_aws_creds(username, password, entity_id, role_arn):
     assertion, roles = login_aws_via_idp(
         requests.Session(), username, password, entity_id)
-    role_arn, principal_arn = choose_role(roles)
+    arns = parse_roles(roles)
+    if not role_arn in arns:
+        logger.debug("all arns: %s", arns)
+        raise ValueError(f"you do not have permission to assume {role_arn}")
+    principal_arn = arns[role_arn]
     return sts_creds_from_saml(role_arn, principal_arn, assertion)
+
+
+def parse_roles(roles):
+    arns = {}
+    for r in roles:
+        role_arn, principal_arn = r.split(",", 1)
+        arns[role_arn] = principal_arn
+    return arns
 
 
 def choose_role(awsroles):
