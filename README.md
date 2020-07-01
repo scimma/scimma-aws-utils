@@ -9,6 +9,35 @@ After that, `scimma-aws login` will be used in the background to fetch
 credentials automatically. You'll be able to use any AWS APIs without
 re-entering credentials.
 
+## Example ##
+
+```
+-> % pip install scimma-aws-utils
+-> % scimma-aws setup
+
+You'll need to provide your SAML IdP entity ID. Details on campus IdPs
+including the SAML entity ID may be found at
+https://incommon.org/federation/incommon-federation-entities/.
+
+Some well-known IdP entity IDs:
+  LIGO: https://login.ligo.org/idp/shibboleth
+  University of Washington: urn:mace:incommon:washington.edu
+Enter your IdP Entity ID:  urn:mace:incommon:washington.edu
+Username you use to login to your IdP: swnelson
+Password:
+AWS Region to connect to [us-west-2]:
+AWS credential profile name to use [default]:
+Your configuration has been saved to /home/swnelson/.config/scimma-aws/config.
+AWS configuration has been saved.
+
+-> % aws sts get-caller-identity | jq
+{
+  "UserId": "AROAYQQCALM7SDS2266Y5:spencer.nelson",
+  "Account": "<redacted>",
+  "Arn": "arn:aws:sts::<redacted>:assumed-role/scimma_power_user/spencer.nelson"
+}
+```
+
 ## Prerequisites ##
 
 You must be a member of the SCIMMA collaboration, with an account already
@@ -42,3 +71,11 @@ The setup program stores your username and password in
 `~/.config/scimma-aws/config` by default.
 
 Keep `scimma-aws` installed on your system and things should Just Work.
+
+## Known Issues ##
+
+### Terraform extra step ###
+Because of a [longstanding
+issue](https://github.com/terraform-providers/terraform-provider-aws/issues/6913)
+with Terraform, you'll need to `export AWS_SDK_LOAD_CONFIG=1` for these
+credentials to be usable by Terraform.
