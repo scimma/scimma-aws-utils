@@ -1,32 +1,31 @@
-import logging
-import re
-import xml.etree.ElementTree as ET
-from base64 import b64decode, b64encode
+from base64 import b64encode, b64decode
+from bs4 import BeautifulSoup
 from datetime import datetime
 from random import randrange
+import re
+import logging
+import xml.etree.ElementTree as ET
 
-from bs4 import BeautifulSoup
 
 SCIMMA_PROXY_SSO = "https://federation-proxy.scimma.org/cilogon/sso/post"
-LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger(__name__)
 
 
 def login_aws_via_idp(session, username, password, entity_id):
     """ Get a SAML assertion and set of AWS roles which can be assumed with the SAML assertion. """
-    LOGGER.info("Looking up your IdP")
-    idp_url, idp_form = get_idp_login_form(
-        session, username, password, entity_id)
+    logger.info("Looking up your IdP")
+    idp_url, idp_form = get_idp_login_form(session, username, password, entity_id)
 
-    LOGGER.info("Logging in to %s", idp_url)
+    logger.info("Logging in to %s", idp_url)
     idp_response = session.post(idp_url, data=idp_form)
     idp_response.raise_for_status()
 
-    LOGGER.info("Parsing response and presenting assertion to CILogon")
+    logger.info("Parsing response and presenting assertion to CILogon")
     cilogon_url, payload = parse_idp_login_response(idp_response.text)
     scimma_saml_proxy_response = session.post(cilogon_url, data=payload)
     scimma_saml_proxy_response.raise_for_status()
 
-    LOGGER.info("Login complete, extracting credentials")
+    logger.info("Login complete, extracting credentials")
     assertion = parse_scimma_sample_response(scimma_saml_proxy_response.text)
     roles = parse_scimma_aws_assertion(assertion)
     return assertion, roles
