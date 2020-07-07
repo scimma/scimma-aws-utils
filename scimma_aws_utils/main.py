@@ -2,8 +2,8 @@ import logging
 
 import click
 
-from .cmd_setup import setup
 from .cmd_login import login
+from .cmd_setup import setup
 
 logger = logging.getLogger(__name__)
 

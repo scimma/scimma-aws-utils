@@ -1,11 +1,11 @@
-from base64 import b64encode, b64decode
-from bs4 import BeautifulSoup
+import logging
+import re
+import xml.etree.ElementTree as ET
+from base64 import b64decode, b64encode
 from datetime import datetime
 from random import randrange
-import re
-import logging
-import xml.etree.ElementTree as ET
 
+from bs4 import BeautifulSoup
 
 SCIMMA_PROXY_SSO = "https://federation-proxy.scimma.org/cilogon/sso/post"
 logger = logging.getLogger(__name__)
@@ -14,7 +14,8 @@ logger = logging.getLogger(__name__)
 def login_aws_via_idp(session, username, password, entity_id):
     """ Get a SAML assertion and set of AWS roles which can be assumed with the SAML assertion. """
     logger.info("Looking up your IdP")
-    idp_url, idp_form = get_idp_login_form(session, username, password, entity_id)
+    idp_url, idp_form = get_idp_login_form(
+        session, username, password, entity_id)
 
     logger.info("Logging in to %s", idp_url)
     idp_response = session.post(idp_url, data=idp_form)
@@ -104,7 +105,7 @@ def populate_idp_form(form_text, username, password):
     password_found = False
 
     logger.debug("parsed IDP login form: %s", form.items()
-    )
+                 )
     for key, value in form.items():
         if "user" in key.lower():
             username_found = True

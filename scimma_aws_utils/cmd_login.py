@@ -1,12 +1,12 @@
-import click
-import os.path
 import json
 import logging
+import os.path
+
+import click
 
 from .awscreds import get_aws_creds
-from .configs import Config, default_config_file, default_cache_dir
+from .configs import Config, default_cache_dir, default_config_file
 from .credentials import CredentialSet
-
 
 logger = logging.getLogger(__name__)
 

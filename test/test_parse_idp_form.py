@@ -1,13 +1,14 @@
-import scimma_aws_utils.auth
-import pytest
 import os.path
-import logging
 
+import pytest
+
+import scimma_aws_utils.auth
 
 FIXTURE_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     'fixtures',
 )
+
 
 def test_parse_uiuc(caplog):
     with open(os.path.join(FIXTURE_DIR, "uiuc_login_response.html")) as f:

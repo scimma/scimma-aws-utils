@@ -1,15 +1,14 @@
-import click
-import os.path
-import requests
 import logging
+import os.path
 import sys
-
 from typing import Dict
+
+import click
+import requests
 
 from .auth import login_aws_via_idp
 from .awscreds import parse_roles, write_aws_config
 from .configs import Config, default_config_file
-
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +103,8 @@ def print_well_known_idps():
         click.secho(f": {entity}")
 
     click.echo("Some institutions which have known issues:")
-    click.secho("  University of Illinois at Urbana-Champaign", fg="yellow", nl=False)
+    click.secho("  University of Illinois at Urbana-Champaign",
+                fg="yellow", nl=False)
     click.secho(": urn:mace:incommon:uiuc.edu")
-    click.secho("    UIUC requires Duo 2FA to log in, which is not supported", fg="red")
+    click.secho(
+        "    UIUC requires Duo 2FA to log in, which is not supported", fg="red")
