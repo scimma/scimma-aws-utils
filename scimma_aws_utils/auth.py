@@ -99,15 +99,30 @@ def populate_idp_form(form_text, username, password):
     and password field names."""
     form = parse_lxml_form(form_text)
     result = {}
+
+    username_found = False
+    password_found = False
+
+    logger.debug("parsed IDP login form: %s", form.items()
+    )
     for key, value in form.items():
         if "user" in key.lower():
+            username_found = True
             result[key] = username
         elif "email" in key.lower():
+            username_found = True
             result[key] = username
         elif "pass" in key.lower():
+            password_found = True
             result[key] = password
         else:
             result[key] = value
+
+    if not username_found:
+        logger.warn("unable to find username field in IDP form")
+    if not password_found:
+        logger.warn("unable to find password field in IDP form")
+
     # Shibboleth IdPs will need to include this field.
     result["_eventId_proceed"] = ""
 
@@ -126,8 +141,14 @@ def parse_idp_login_response(text):
 
         if (inputtag.get('name') == 'RelayState'):
             relay_state = inputtag.get('value')
+
     if assertion == "":
-        raise ValueError("Response did not contain a valid SAML assertion")
+        if "duo_iframe" in text:
+            logger.warn("It looks like your IDP uses Duo. scimma-aws doesn't "
+                        "know how to log in to 2FA systems. See "
+                        "https://github.com/scimma/scimma-aws-utils/issues/1.")
+        logger.debug("Response text from the IDP: %s", text)
+        raise ValueError("Failed to log in to your IDP")
 
     # Parse the returned payload to find the AssertionConsumerService URL
     # for the CILogon SP to which we will POST the SAML Response. Since CILogon

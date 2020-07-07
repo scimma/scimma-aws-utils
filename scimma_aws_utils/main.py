@@ -16,7 +16,8 @@ def main(verbose, debug):
         logging.basicConfig(level=logging.DEBUG)
     elif verbose:
         logging.basicConfig(level=logging.INFO)
-    pass
+    else:
+        logging.basicConfig(level=logging.WARN)
 
 
 main.add_command(setup)

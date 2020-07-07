@@ -96,10 +96,14 @@ def print_well_known_idps():
         "LIGO": "https://login.ligo.org/idp/shibboleth",
         "Penn State": "urn:mace:incommon:psu.edu",
         "University of California, Santa Barbara": "urn:mace:incommon:ucsb.edu",
-        "University of Illinois at Urbana-Champaign": "urn:mace:incommon:uiuc.edu",
         "University of Washington": "urn:mace:incommon:washington.edu",
         "University of Wisconsin-Milwaukee": "https://idp.uwm.edu/idp/shibboleth",
     }
     for institution, entity in well_known_idps.items():
         click.secho(f"  {institution}", fg="yellow", nl=False)
         click.secho(f": {entity}")
+
+    click.echo("Some institutions which have known issues:")
+    click.secho("  University of Illinois at Urbana-Champaign", fg="yellow", nl=False)
+    click.secho(": urn:mace:incommon:uiuc.edu")
+    click.secho("    UIUC requires Duo 2FA to log in, which is not supported", fg="red")

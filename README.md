@@ -74,6 +74,12 @@ Keep `scimma-aws` installed on your system and things should Just Work.
 
 ## Known Issues ##
 
+### 2FA Auth ###
+
+This script has no idea how to log in to systems which require 2-Factor
+Authentication like Duo. This means that you can't use it to log in for UIUC,
+and maybe others.
+
 ### Terraform extra step ###
 Because of a [longstanding
 issue](https://github.com/terraform-providers/terraform-provider-aws/issues/6913)
